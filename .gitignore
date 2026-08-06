@@ -1,0 +1,35 @@
+# Node
+node_modules/
+
+# Local env (keep the template)
+.env
+!.env.example
+
+# Vendored FFmpeg binaries (keep .gitkeep)
+vendor/ffmpeg/bin/
+vendor/ffmpeg/doc/
+vendor/ffmpeg/presets/
+vendor/ffmpeg/*.html
+vendor/ffmpeg/LICENSE
+vendor/ffmpeg/README.txt
+
+# Nested HyperFrames clone — keep skills/, drop heavy trees from git
+.skills/hyperframes/.git/
+.skills/hyperframes/packages/
+
+# Render / preview outputs
+**/out/
+**/output/
+**/dist/
+**/.hyperframes/
+**/*-render*/
+*.mp4
+*.webm
+*.mov
+!research/**
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
