@@ -33,3 +33,6 @@ vendor/ffmpeg/README.txt
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Local pitch deck (keep on disk, out of git)
+/video-material/
