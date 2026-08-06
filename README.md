@@ -6,6 +6,16 @@ Make video with **HyperFrames** + **Devin**: skills guide the agent; the CLI che
 
 ---
 
+## Disclaimer
+
+This repository is a **local research / evaluation kit** for exploring HyperFrames with Devin. It is **not** production software, not a supported product offering, and not warranty-backed for operational use.
+
+**HyperFrames** is upstream open-source software from [HeyGen](https://github.com/heygen-com/hyperframes) (Apache-2.0). This kit is an independent packaging and agent workflow overlay. It is **not affiliated with, endorsed by, or officially supported by HeyGen**. Trademarks and product names belong to their respective owners.
+
+Use at your own risk. Validate renders, licenses, and security posture before any broader adoption.
+
+---
+
 ## Check env first
 
 Open [`.env.example`](.env.example) and confirm the paths. **HyperFrames does not load `.env` automatically** — copy those values into CMD with `set` each session (below), then run `doctor`.
