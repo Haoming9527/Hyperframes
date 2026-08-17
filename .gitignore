@@ -28,6 +28,9 @@ vendor/ffmpeg/README.txt
 *.mov
 !research/**
 
+# Pack output
+/dist/
+
 # Logs & OS
 *.log
 .DS_Store

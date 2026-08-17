@@ -8,11 +8,13 @@ Make video with **HyperFrames** + **Devin**: skills guide the agent; the CLI che
 
 ## Disclaimer
 
-This repository is a **local research / evaluation kit** for exploring HyperFrames with Devin. It is **not** production software, not a supported product offering, and not warranty-backed for operational use.
+This is a **local evaluation kit** for trying HyperFrames with Devin. It is **not** a product, not production software, and not warranty-backed.
 
-**HyperFrames** is upstream open-source software from [HeyGen](https://github.com/heygen-com/hyperframes) (Apache-2.0). This kit is an independent packaging and agent workflow overlay. It is **not affiliated with, endorsed by, or officially supported by HeyGen**. Trademarks and product names belong to their respective owners.
+**HyperFrames** is upstream open-source software from [HeyGen](https://github.com/heygen-com/hyperframes) (Apache-2.0). This kit is an independent packaging and agent-workflow overlay. It is **not affiliated with, endorsed by, or officially supported by HeyGen**. Trademarks and product names belong to their respective owners.
 
-Use at your own risk. Validate renders, licenses, and security posture before any broader adoption.
+A release zip of this kit is for **internal evaluation only**. Use at your own risk. Check licenses, renders, and security posture before any broader use.
+
+Do **not** run `npm install`, `hyperframes upgrade`, or `hyperframes skills update` from this kit — those hit the public registry.
 
 ---
 
@@ -174,3 +176,33 @@ Needs on the PC: **Node.js**, **npm**, and **Chrome**.
 - No cloud render / no registry installs in this kit.
 
 HyperFrames CLI **0.7.94**.
+
+---
+
+## Pack a release zip
+
+From the repo root:
+
+```bat
+pack-release.cmd
+```
+
+A single-line progress bar updates in place (`Copying files…` then `Writing zip…`).
+
+Or in PowerShell:
+
+```powershell
+.\pack-release.ps1
+```
+
+Writes `dist\Hyperframes-local-kit-0.7.94.zip`. Use that file for handoff. Windows Explorer cannot open zips made with `tar -a` (it reports the folder as invalid); the packer now writes an Explorer-safe zip. If extract still fails, use:
+
+```bat
+tar -xf Hyperframes-local-kit-0.7.94.zip
+```
+
+**Left out of the zip:** `research\`, `renders\`, `pitch-video\`, `video-material\`, plus `.git`, `*.mp4`, `.env`, and the nested clone’s `.git` / `packages` trees (those are huge and not needed to run the kit).
+
+**Kept:** `README.md`, `AGENTS.md`, `.env.example`, `node_modules\`, `vendor\ffmpeg\`, `.skills\hyperframes\skills\`.
+
+Do **not** use `git archive` — git ignores `node_modules` and FFmpeg, which the unzipped kit needs.
