@@ -18,8 +18,8 @@ function Write-Bar {
   $bar = ("#" * $fill).PadRight($width, "-")
   $line = "  [{0}] {1,3}%  {2}" -f $bar, $pct, $Status
   if ($Elapsed) { $line += "  $Elapsed" }
-  $pad = [Math]::Max(0, 100 - $line.Length)
-  Write-Host ("`r" + $line + (" " * $pad)) -NoNewline
+  $pad = [Math]::Max(0, 110 - $line.Length)
+  [Console]::Write("`r" + $line + (" " * $pad))
 }
 
 function Format-Elapsed([datetime]$start) {
@@ -27,28 +27,33 @@ function Format-Elapsed([datetime]$start) {
   "{0:mm\:ss}" -f [TimeSpan]::FromSeconds([int]$t.TotalSeconds)
 }
 
-function Wait-ProcessBar {
+function Wait-While {
   param(
-    [Diagnostics.Process]$Process,
+    [scriptblock]$StillRunning,
     [int]$From,
     [int]$To,
     [string]$Label,
-    [datetime]$Start
+    [datetime]$Start,
+    [scriptblock]$ExtraStatus
   )
-  while (-not $Process.HasExited) {
+  while (& $StillRunning) {
     $elapsed = ((Get-Date) - $Start).TotalSeconds
-    $pct = $From + [int](($To - $From - 1) * (1 - [Math]::Exp(-$elapsed / 35.0)))
+    $pct = $From + [int](($To - $From - 1) * (1 - [Math]::Exp(-$elapsed / 45.0)))
     if ($pct -lt $From) { $pct = $From }
     if ($pct -gt ($To - 1)) { $pct = $To - 1 }
-    Write-Bar -Percent $pct -Status $Label -Elapsed (Format-Elapsed $Start)
-    Start-Sleep -Milliseconds 180
+    $status = $Label
+    if ($ExtraStatus) {
+      $extra = & $ExtraStatus
+      if ($extra) { $status = "$Label  $extra" }
+    }
+    Write-Bar -Percent $pct -Status $status -Elapsed (Format-Elapsed $Start)
+    Start-Sleep -Milliseconds 250
   }
-  $Process.WaitForExit()
-  return $Process.ExitCode
 }
 
 Write-Host ""
 Write-Host "Packing $Name"
+Write-Host "Close the zip in Explorer / Cursor if it is open, or the write will stall."
 Write-Host ""
 
 if (Test-Path -LiteralPath $Stage) {
@@ -60,47 +65,63 @@ New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 
 $copyStart = Get-Date
 $robocopy = Start-Process -FilePath "robocopy.exe" -ArgumentList @(
-  ".", $Stage, "/E", "/NFL", "/NDL", "/NJH", "/NJS", "/R:1", "/W:1",
+  ".", $Stage, "/E", "/NFL", "/NDL", "/NJH", "/NJS", "/MT:8", "/R:1", "/W:1",
   "/XD", "research", "renders", "pitch-video", "video-material", "pitch-deck",
   "videos", "dist", ".git", "packages", "snapshots", ".hyperframes",
   "/XF", "*.mp4", "*.webm", "*.mov", ".env"
 ) -NoNewWindow -PassThru
 
-$copyExit = Wait-ProcessBar -Process $robocopy -From 3 -To 74 -Label "Copying files..." -Start $copyStart
-if ($copyExit -ge 8) {
+Wait-While -StillRunning { -not $robocopy.HasExited } -From 3 -To 74 -Label "Copying files..." -Start $copyStart
+$robocopy.WaitForExit()
+if ($robocopy.ExitCode -ge 8) {
   Write-Host ""
-  Write-Error "robocopy failed, exit $copyExit"
+  Write-Error "robocopy failed, exit $($robocopy.ExitCode)"
   exit 1
 }
 Write-Bar -Percent 75 -Status "Copy complete." -Elapsed (Format-Elapsed $copyStart)
 Write-Host ""
 
 if (Test-Path -LiteralPath $Out) {
-  Remove-Item -LiteralPath $Out -Force
+  try {
+    Remove-Item -LiteralPath $Out -Force -ErrorAction Stop
+  } catch {
+    Write-Host ""
+    Write-Error "Cannot overwrite the zip. Close dist\$Name.zip in Cursor/Explorer, then run pack-release.cmd again."
+    exit 1
+  }
 }
 
 $zipStart = Get-Date
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-Write-Bar -Percent 80 -Status "Writing zip..." -Elapsed (Format-Elapsed $zipStart)
-try {
+$job = Start-Job -ScriptBlock {
+  param($stage, $out)
+  Add-Type -AssemblyName System.IO.Compression
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
   [IO.Compression.ZipFile]::CreateFromDirectory(
-    $Stage,
-    $Out,
-    [IO.Compression.CompressionLevel]::Optimal,
+    $stage,
+    $out,
+    [IO.Compression.CompressionLevel]::Fastest,
     $false
   )
-} catch {
-  Write-Host ""
-  Write-Error "zip failed: $($_.Exception.Message)"
-  exit 1
-}
+} -ArgumentList $Stage, $Out
+
+Wait-While `
+  -StillRunning { $job.State -eq "Running" } `
+  -From 76 -To 96 `
+  -Label "Writing zip..." `
+  -Start $zipStart `
+  -ExtraStatus {
+    if (Test-Path -LiteralPath $Out) {
+      $mb = [Math]::Round((Get-Item -LiteralPath $Out).Length / 1MB, 0)
+      "$mb MB"
+    }
+  }
+
+Receive-Job -Job $job -ErrorAction Stop | Out-Null
+Remove-Job -Job $job -Force | Out-Null
 Write-Bar -Percent 96 -Status "Zip written." -Elapsed (Format-Elapsed $zipStart)
 Write-Host ""
 
-Write-Bar -Percent 97 -Status "Cleaning stage..." -Elapsed (Format-Elapsed $zipStart)
-Write-Host ""
-
+Write-Bar -Percent 97 -Status "Cleaning stage..."
 Remove-Item -LiteralPath $Stage -Recurse -Force
 Write-Bar -Percent 100 -Status "Done."
 Write-Host ""
